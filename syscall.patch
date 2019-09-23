@@ -37,3 +37,53 @@ index 04bc07c..517f5fe 100644
  
  obj-$(CONFIG_MODULES) += kmod.o
  obj-$(CONFIG_MULTIUSER) += groups.o
+diff --git a/kernel/s2_encrypt.c b/kernel/s2_encrypt.c
+new file mode 100644
+index 0000000..a7e5232
+--- /dev/null
++++ b/kernel/s2_encrypt.c
+@@ -0,0 +1,44 @@
++#include <linux/kernel.h>
++#include <linux/init.h>
++#include <linux/sched.h>
++#include <linux/syscalls.h>
++#include <linux/linkage.h>
++#include <linux/uaccess.h>
++
++SYSCALL_DEFINE2 (s2_encrypt, char __user*, input, int, inc) {
++	/* Reading Encryption key value */
++	unsigned long increment = inc;
++	
++	/* Validating Encryption key */
++	if(increment < 1 || increment > 5) {
++		printk(KERN_ERR "\nsys_s2_encrypt: Invalid encryption key value, Please enter value in the range 1-5\n");
++		return -EINVAL;
++	}	
++	/* Reading input string to be encrypted from user space */
++	char buf[256];
++	if(copy_from_user(buf, input, 256)) {
++		printk(KERN_ERR "\nsys_s2_encrypt: copy from user string failed\n");
++		return -EFAULT;
++	}
++
++	/* Incrementing each character of input string with key
++	 * If the incremented value is out of bounds EINVAL is returned
++	 */
++	unsigned long k = 0;
++	unsigned long av = 0;
++	unsigned long incValue = 0;
++
++	while(buf[k] != '\0') {
++		av = (int) buf[k];
++		incValue = av + increment;
++		if(incValue < 0 || incValue > 255) {
++			printk(KERN_ERR "\nsys_s2_encrypt: Encrypted value out of bounds\n");
++			return -EINVAL;
++		}
++		buf[k++] = incValue;
++	}
++
++	/* Printing the output if encryption is successful */
++	printk(KERN_INFO "\nsys_s2_encrypt: Encrypted string: %s\n", buf);
++	return 0;
++}
